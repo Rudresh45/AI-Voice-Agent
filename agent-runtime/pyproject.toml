@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "ai-voice-agent-runtime"
 version = "0.1.0"
 requires-python = ">=3.12"
-dependencies = ["google-genai>=1.0", "python-dotenv>=1.0"]
+dependencies = ["google-genai>=1.0", "python-dotenv>=1.0", "pydantic>=2.0"]
 
 [tool.setuptools.packages.find]
 include = ["app*"]

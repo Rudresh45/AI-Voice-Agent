@@ -11,7 +11,7 @@ def main():
         if text:
             try:
                 print("Agent:", runner.run(text))
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - CLI top-level exception reporting
                 print(f"Request failed ({type(exc).__name__}); check server logs.")
 
 
