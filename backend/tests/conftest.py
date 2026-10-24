@@ -5,11 +5,14 @@ from __future__ import annotations
 from collections.abc import Generator
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.api.dependencies import get_db
 from app.db.base import Base
+from app.main import app
 
 
 # Ensure SQLite enforces Foreign Key constraints for test isolation
@@ -52,3 +55,11 @@ def db_session(engine) -> Generator[Session, None, None]:
     Base.metadata.drop_all(bind=connection)
     connection.close()
 
+
+@pytest.fixture(scope="function")
+def client(db_session: Session) -> Generator[TestClient, None, None]:
+    """Provide a TestClient with overridden database session."""
+    app.dependency_overrides[get_db] = lambda: db_session
+    with TestClient(app) as test_client:
+        yield test_client
+    app.dependency_overrides.clear()

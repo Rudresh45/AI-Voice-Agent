@@ -18,6 +18,8 @@ class Settings(BaseSettings):
         "postgresql+psycopg://voice_app:change-me-local-only@localhost:5432/voice_platform"
     )
     redis_url: str | None = None
+    external_request_timeout_seconds: float = 15.0
+    llm_request_timeout_seconds: float = 30.0
 
     model_config = SettingsConfigDict(
         env_file=(str(DOTENV_PATH), ".env", "../.env"),
