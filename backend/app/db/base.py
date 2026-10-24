@@ -23,6 +23,7 @@ from app.db.models import (
     ToolExecutionStatus,
     UsageEvent,
     User,
+    UserSession,
 )
 
 __all__ = [
@@ -48,4 +49,5 @@ __all__ = [
     "ToolExecutionStatus",
     "UsageEvent",
     "User",
+    "UserSession",
 ]

@@ -11,6 +11,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.core.security import hash_password
 from app.db.models import (
     Agent,
     AgentStatus,
@@ -52,15 +53,19 @@ def seed_development_data(db: Session) -> dict[str, Any]:
     db.flush()
 
     # 2. Users (Global identity references with synthetic data)
+    dev_password_hash = hash_password("DevPassword123!")
     user_alice = User(
         external_id="auth0|dev_alice_001",
         email="alice.developer@example.internal",
         display_name="Alice (Dev Admin)",
+        hashed_password=dev_password_hash,
+        is_platform_admin=True,
     )
     user_bob = User(
         external_id="auth0|dev_bob_002",
         email="bob.tester@example.internal",
         display_name="Bob (Dev Member)",
+        hashed_password=dev_password_hash,
     )
     db.add_all([user_alice, user_bob])
     db.flush()

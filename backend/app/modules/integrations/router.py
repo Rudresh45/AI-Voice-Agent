@@ -1,4 +1,4 @@
-"""Integrations domain API router."""
+"""Integrations domain API router with RBAC enforcement."""
 
 import uuid
 from collections.abc import Sequence
@@ -7,7 +7,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_tenant, get_db
+from app.api.dependencies import (
+    RequestContext,
+    get_current_tenant,
+    get_db,
+    require_admin_access,
+)
 from app.db.models import Tenant
 from app.modules.integrations.schemas import ToolDefinitionCreate, ToolDefinitionRead
 from app.modules.integrations.service import IntegrationsService
@@ -18,11 +23,11 @@ router = APIRouter(prefix="/integrations", tags=["Integrations"])
 @router.post("/tools", response_model=ToolDefinitionRead, status_code=status.HTTP_201_CREATED, summary="Create custom tool")
 def create_tool(
     data: ToolDefinitionCreate,
-    current_tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    context: Annotated[RequestContext, Depends(require_admin_access)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ToolDefinitionRead:
     service = IntegrationsService(db)
-    return service.create_custom_tool(current_tenant.id, data)
+    return service.create_custom_tool(context.tenant.id, data)
 
 
 @router.get("/tools", response_model=list[ToolDefinitionRead], summary="List accessible tools")

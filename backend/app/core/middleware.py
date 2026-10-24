@@ -45,16 +45,20 @@ def setup_middleware(app: FastAPI) -> None:
     # 1. Context and logging middleware
     app.add_middleware(RequestContextMiddleware)
 
-    # 2. CORS configuration
-    allowed_origins = [
-        settings.frontend_url,
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ]
+    # 2. CORS configuration with explicit production origins
+    if settings.app_env == "production":
+        allowed_origins = [settings.frontend_url]
+    else:
+        allowed_origins = [
+            settings.frontend_url,
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+        ]
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allowed_origins,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID", "X-Tenant-ID", "X-User-ID"],
     )

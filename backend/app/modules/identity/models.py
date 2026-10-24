@@ -1,5 +1,5 @@
 """Identity domain models."""
 
-from app.db.models import Membership, User
+from app.db.models import Membership, User, UserSession
 
-__all__ = ["Membership", "User"]
+__all__ = ["Membership", "User", "UserSession"]

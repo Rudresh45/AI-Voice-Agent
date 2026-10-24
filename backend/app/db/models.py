@@ -60,6 +60,9 @@ class MembershipRole(str, enum.Enum):
     ADMIN = "admin"
     MEMBER = "member"
     VIEWER = "viewer"
+    TENANT_ADMIN = "tenant_admin"
+    AGENT_OPERATOR = "agent_operator"
+    READ_ONLY = "read_only"
 
 
 class AgentStatus(str, enum.Enum):
@@ -163,6 +166,8 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
     display_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    hashed_password: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    is_platform_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, server_default=func.now(), nullable=False
     )
@@ -181,6 +186,39 @@ class User(Base):
     conversations: Mapped[list[Conversation]] = relationship(
         "Conversation", back_populates="user"
     )
+    sessions: Mapped[list[UserSession]] = relationship(
+        "UserSession", back_populates="user", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+
+# ---------------------------------------------------------------------------
+# 2b. UserSession
+# ---------------------------------------------------------------------------
+
+class UserSession(Base):
+    """Server-side tracked user authentication session."""
+
+    __tablename__ = "user_sessions"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    is_revoked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, server_default=func.now(), nullable=False
+    )
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    user: Mapped[User] = relationship("User", back_populates="sessions")
+
 
 
 # ---------------------------------------------------------------------------

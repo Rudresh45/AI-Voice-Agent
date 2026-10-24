@@ -1,4 +1,4 @@
-"""Conversations domain API router."""
+"""Conversations domain API router with RBAC enforcement."""
 
 import uuid
 from collections.abc import Sequence
@@ -7,9 +7,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_tenant, get_current_user, get_db
+from app.api.dependencies import (
+    RequestContext,
+    get_current_tenant,
+    get_db,
+    require_write_access,
+)
 from app.core.pagination import PageParams, PaginatedResponse
-from app.db.models import Tenant, User
+from app.db.models import Tenant
 from app.modules.conversations.schemas import (
     ConversationCreate,
     ConversationRead,
@@ -24,12 +29,11 @@ router = APIRouter(prefix="/conversations", tags=["Conversations"])
 @router.post("/", response_model=ConversationRead, status_code=status.HTTP_201_CREATED, summary="Create conversation")
 def create_conversation(
     data: ConversationCreate,
-    current_tenant: Annotated[Tenant, Depends(get_current_tenant)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    context: Annotated[RequestContext, Depends(require_write_access)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ConversationRead:
     service = ConversationService(db)
-    return service.create_conversation(current_tenant.id, current_user.id, data)
+    return service.create_conversation(context.tenant.id, context.user.id, data)
 
 
 @router.get("/", response_model=PaginatedResponse[ConversationRead], summary="List conversations")
@@ -65,11 +69,11 @@ def get_conversation(
 def add_message(
     conversation_id: uuid.UUID,
     data: MessageCreate,
-    current_tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    context: Annotated[RequestContext, Depends(require_write_access)],
     db: Annotated[Session, Depends(get_db)],
 ) -> MessageRead:
     service = ConversationService(db)
-    return service.add_message(current_tenant.id, conversation_id, data)
+    return service.add_message(context.tenant.id, conversation_id, data)
 
 
 @router.get("/{conversation_id}/messages", response_model=list[MessageRead], summary="List conversation messages")
