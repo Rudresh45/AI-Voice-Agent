@@ -1,0 +1,50 @@
+# Environment and secrets
+.env
+.env.*
+.env*.local
+*.pem
+*.key
+*.cert
+*.crt
+secrets/
+
+# Documentation (per user preference: do not push docs folder)
+docs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Node dependencies and build output
+node_modules/
+.next/
+dist/
+build/
+out/
+.npm
+
+# Python cache & artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+
+# Local databases & dumps
+*.db
+*.sqlite
+*.sqlite3
+backup-*.dump
+backup-*.sql
+*.enc
+
+# OS files
+.DS_Store
+Thumbs.db

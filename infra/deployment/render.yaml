@@ -1,0 +1,19 @@
+# Review plan and secret values before deployment.
+services:
+  - type: web
+    name: ai-voice-platform-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /health/live
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+# Free instances may sleep and are not recommended for production workloads.
