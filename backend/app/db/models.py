@@ -16,6 +16,7 @@ from sqlalchemy import (
     JSON,
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -149,6 +150,9 @@ class Tenant(Base):
     )
     audit_events: Mapped[list[AuditEvent]] = relationship(
         "AuditEvent", back_populates="tenant", cascade="all, delete-orphan", passive_deletes=True
+    )
+    memory_facts: Mapped[list[MemoryFact]] = relationship(
+        "MemoryFact", back_populates="tenant", cascade="all, delete-orphan", passive_deletes=True
     )
 
 
@@ -411,6 +415,10 @@ class Conversation(Base):
     status: Mapped[str] = mapped_column(
         String(32), nullable=False, default=ConversationStatus.ACTIVE.value
     )
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    retention_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    meta_data: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, server_default=func.now(), nullable=False
     )
@@ -444,6 +452,10 @@ class Conversation(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    memory_facts: Mapped[list[MemoryFact]] = relationship(
+        "MemoryFact",
+        back_populates="conversation",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -465,6 +477,7 @@ class Message(Base):
     role: Mapped[str] = mapped_column(String(32), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     token_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    idempotency_key: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)
     meta_data: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, server_default=func.now(), nullable=False
@@ -473,6 +486,7 @@ class Message(Base):
     __table_args__ = (
         Index("ix_messages_conv_created", "conversation_id", "created_at"),
         Index("ix_messages_tenant_created", "tenant_id", "created_at"),
+        Index("ix_messages_tenant_idempotency", "tenant_id", "idempotency_key"),
     )
 
     # Relationships
@@ -652,3 +666,57 @@ class OutboxEvent(Base):
     __table_args__ = (
         Index("ix_outbox_unpublished_created", "published", "created_at"),
     )
+
+
+# ---------------------------------------------------------------------------
+# 14. MemoryFact (Long-term Memory)
+# ---------------------------------------------------------------------------
+
+class MemoryFact(Base):
+    """Explicitly approved, tenant-scoped fact or summary with provenance and retention."""
+
+    __tablename__ = "memory_facts"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    agent_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("agents.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    conversation_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("conversations.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    fact: Mapped[str] = mapped_column(Text, nullable=False)
+    category: Mapped[str] = mapped_column(String(64), nullable=False, default="fact")
+    is_approved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    approved_by: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    confidence_score: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
+    retention_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    meta_data: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        server_default=func.now(),
+        onupdate=utc_now,
+        nullable=False,
+    )
+
+    __table_args__ = (
+        Index("ix_memory_facts_tenant_approved", "tenant_id", "is_approved"),
+        Index("ix_memory_facts_tenant_created", "tenant_id", "created_at"),
+    )
+
+    # Relationships
+    tenant: Mapped[Tenant] = relationship("Tenant", back_populates="memory_facts")
+    user: Mapped[User | None] = relationship("User", foreign_keys=[user_id])
+    conversation: Mapped[Conversation | None] = relationship("Conversation", back_populates="memory_facts")

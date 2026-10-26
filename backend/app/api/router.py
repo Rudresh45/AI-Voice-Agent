@@ -12,6 +12,8 @@ from app.modules.knowledge.router import router as knowledge_router
 from app.modules.platform_ops.router import router as platform_ops_router
 from app.modules.tenants.router import router as tenants_router
 from app.modules.usage.router import router as usage_router
+from app.transport.http_transport import router as voice_router
+from app.transport.websocket_transport import ws_router as voice_ws_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -25,3 +27,5 @@ api_router.include_router(integrations_router)
 api_router.include_router(usage_router)
 api_router.include_router(audit_router)
 api_router.include_router(platform_ops_router)
+api_router.include_router(voice_router)
+api_router.include_router(voice_ws_router)
